@@ -1,0 +1,87 @@
+# OSM tag → category mapping
+# Used by discovery.py to query Overpass API.
+# Each category maps to a list of OSM tag key=value pairs.
+# Multiple tags per category are OR'd together in the Overpass query.
+
+categories:
+  food_cafe:
+    label: "Food & Café"
+    osm_tags:
+      - amenity=cafe
+      - amenity=fast_food
+      - amenity=restaurant
+      - amenity=food_court
+      - amenity=ice_cream
+      - shop=bakery
+      - shop=coffee
+    career_keywords: [careers, jobs, hiring, "work with us", crew, staff, barista]
+
+  retail:
+    label: "Retail"
+    osm_tags:
+      - shop=supermarket
+      - shop=convenience
+      - shop=clothes
+      - shop=department_store
+      - shop=electronics
+      - shop=books
+      - shop=sports
+      - shop=mall
+      - shop=variety_store
+    career_keywords: [careers, jobs, hiring, "retail assistant", "store team", vacancies]
+
+  delivery:
+    label: "Delivery & Driving"
+    osm_tags:
+      - amenity=bicycle_rental
+      - shop=courier
+      - office=logistics
+      - office=delivery
+    career_keywords: [driver, delivery, courier, rider, "join the fleet"]
+
+  warehouse:
+    label: "Warehouse & Logistics"
+    osm_tags:
+      - building=warehouse
+      - landuse=industrial
+      - office=logistics
+      - office=distribution
+    career_keywords: [warehouse, picker, packer, forklift, logistics, distribution]
+
+  campus:
+    label: "Campus & University"
+    osm_tags:
+      - amenity=university
+      - amenity=college
+      - amenity=library
+      - amenity=research_institute
+    career_keywords: [student jobs, campus jobs, "work on campus", casual staff, research assistant]
+
+  tutoring:
+    label: "Tutoring & Education"
+    osm_tags:
+      - amenity=school
+      - amenity=college
+      - amenity=tutoring_centre
+      - office=educational_institution
+    career_keywords: [tutor, teaching, educator, instructor]
+
+  health:
+    label: "Healthcare"
+    osm_tags:
+      - amenity=hospital
+      - amenity=clinic
+      - amenity=pharmacy
+      - amenity=dentist
+      - office=healthcare
+    career_keywords: [careers, nursing, clinical, "healthcare jobs"]
+
+# Minimum node score to include in results (nodes without name are excluded automatically)
+min_name_length: 3
+
+# OSM tags that are never useful as employers (filter out)
+exclude_tags:
+  - amenity=parking
+  - amenity=toilets
+  - amenity=bench
+  - amenity=waste_basket

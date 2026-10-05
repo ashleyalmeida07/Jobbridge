@@ -1,0 +1,56 @@
+---
+# Scraper source registry
+# Add/remove entries here; no Python changes needed.
+# Fields per scraper entry:
+#   id          – must match class name key in registry.py
+#   enabled     – set false to skip without deleting entry
+#   needs_js    – if true, Playwright will be used (slower)
+#   rate_limit  – seconds between requests to this domain
+#   base_url    – override if site moves; used inside the scraper
+#   robots_url  – where to find robots.txt (leave blank = base_url/robots.txt)
+
+countries:
+  AU:
+    name: Australia
+    scrapers:
+      - id: seek_au            # Seek.com.au JSON-XHR (no JS needed)
+        enabled: true
+        needs_js: false
+        rate_limit: 3
+        base_url: "https://www.seek.com.au"
+
+      - id: mcdonalds_au       # McDonald's Australia careers (static HTML)
+        enabled: true
+        needs_js: false
+        rate_limit: 4
+        base_url: "https://careers.mcdonalds.com.au"
+
+      - id: woolworths_au      # Woolworths Group careers (JSON-XHR)
+        enabled: true
+        needs_js: false
+        rate_limit: 3
+        base_url: "https://careers.woolworthsgroup.com.au"
+
+      - id: unijobs_au         # UniJobs (campus/student board, static HTML)
+        enabled: true
+        needs_js: false
+        rate_limit: 3
+        base_url: "https://www.unijobs.com.au"
+
+  US:
+    name: United States
+    scrapers:
+      - id: indeed_us
+        enabled: false          # Indeed blocks scrapers — enable with caution
+        needs_js: true
+        rate_limit: 5
+        base_url: "https://www.indeed.com"
+
+  GB:
+    name: United Kingdom
+    scrapers:
+      - id: reed_uk
+        enabled: false
+        needs_js: false
+        rate_limit: 3
+        base_url: "https://www.reed.co.uk"

@@ -1,0 +1,90 @@
+name: Daily Scraper
+
+on:
+  schedule:
+    - cron: '0 20 * * *'   # 20:00 UTC = 06:00 AEST (runs daily before Aus morning)
+  workflow_dispatch:         # allow manual trigger from GitHub UI
+    inputs:
+      country:
+        description: 'Country code (AU, US, GB)'
+        required: false
+        default: 'AU'
+      keyword:
+        description: 'Keyword to scrape'
+        required: false
+        default: 'jobs'
+      city:
+        description: 'City'
+        required: false
+        default: ''
+
+env:
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  FERNET_KEY: ${{ secrets.FERNET_KEY }}
+  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
+  FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+  SCRAPER_ADMIN_KEY: ${{ secrets.SCRAPER_ADMIN_KEY }}
+  TARGET_COUNTRY: ${{ github.event.inputs.country || 'AU' }}
+
+jobs:
+  scrape:
+    name: Run Job Scraper
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: backend
+        run: |
+          python -m pytest tests/test_extractor.py -v --tb=short
+
+      - name: Scrape boards — AU (all)
+        working-directory: backend
+        run: |
+          python -m app.scraper.cli run \
+            --country ${{ github.event.inputs.country || 'AU' }} \
+            --keyword "${{ github.event.inputs.keyword || 'jobs' }}" \
+            --city "${{ github.event.inputs.city || '' }}" \
+            --limit 100
+
+      - name: Scrape boards — part-time
+        working-directory: backend
+        run: |
+          python -m app.scraper.cli run \
+            --country ${{ github.event.inputs.country || 'AU' }} \
+            --keyword "part time" \
+            --city "${{ github.event.inputs.city || '' }}" \
+            --limit 100
+
+      - name: Scrape boards — casual
+        working-directory: backend
+        run: |
+          python -m app.scraper.cli run \
+            --country ${{ github.event.inputs.country || 'AU' }} \
+            --keyword "casual" \
+            --city "${{ github.event.inputs.city || '' }}" \
+            --limit 100
+
+      - name: List boards
+        working-directory: backend
+        run: |
+          python -m app.scraper.cli boards --country ${{ github.event.inputs.country || 'AU' }}

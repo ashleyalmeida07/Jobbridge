@@ -1,0 +1,128 @@
+# Generic job board config — YAML-driven.
+# Adding a board requires only a new entry here.
+# Fields:
+#   id           – unique scraper key
+#   name         – human-readable name
+#   enabled      – false to skip
+#   url_template – {keyword}, {city}, {country}, {page} are interpolated
+#   json_ld      – true: try JSON-LD first before CSS selectors
+#   selectors:
+#     list_item  – CSS selector for each job card in the results list
+#     title      – relative to list_item
+#     employer   – relative to list_item
+#     location   – relative to list_item
+#     pay        – relative to list_item (may be absent)
+#     job_type   – relative to list_item
+#     date       – relative to list_item
+#     link       – relative to list_item, must resolve to detail page URL
+#   rate_limit   – seconds between requests
+#   max_pages    – how many result pages to fetch
+
+countries:
+  AU:
+    boards:
+      - id: jora_au
+        name: "Jora Australia"
+        enabled: false  # Blocked: returns 403
+        url_template: "https://au.jora.com/jobs?q={keyword}&l={city}&p={page}"
+        json_ld: true
+        rate_limit: 3
+        max_pages: 3
+        selectors:
+          list_item: "article.job-card, div.job-card, [data-testid='job-card']"
+          title:     "h2, h3, .job-title, [data-testid='job-title']"
+          employer:  ".company, [data-testid='company-name'], [class*='company']"
+          location:  ".location, [data-testid='job-location'], [class*='location']"
+          pay:       ".salary-info, [class*='salary'], [class*='pay']"
+          job_type:  ".listing-work-type, [class*='work-type'], [class*='job-type']"
+          date:      "time, .date, [class*='date']"
+          link:      "a[href*='/job/'], a.job-link, a[href*='/apply/']"
+
+      - id: simplyhired_au
+        name: "SimplyHired Australia"
+        enabled: true
+        url_template: "https://www.simplyhired.com.au/search?q={keyword}&l={city}&pn={page}"
+        json_ld: false
+        rate_limit: 4
+        max_pages: 2
+        selectors:
+          list_item: "[data-jobkey], .SerpJob-jobCard, li.css-0"
+          title:     ".jobposting-title, h2, h3, [data-testid='jobTitle']"
+          employer:  "[data-testid='companyName'], .jobposting-company, span.chakra-text, .company"
+          location:  "[data-testid='searchSerpJobLocation'], .jobposting-location, .location"
+          pay:       "[data-testid='searchSerpJobSalaryEstimated'], .jobposting-salary"
+          job_type:  "[data-testid='searchSerpJobJobType'], .jobposting-type"
+          date:      "[data-testid='searchSerpJobDateStamp'], .jobposting-date"
+          link:      "a[data-testid='jobTitle'], a[href*='/job/'], a"
+
+      - id: adzuna_au
+        name: "Adzuna Australia"
+        enabled: false  # Blocked: returns 400
+        url_template: "https://www.adzuna.com.au/search?q={keyword}&loc={city}&p={page}"
+        json_ld: true
+        rate_limit: 4
+        max_pages: 2
+        selectors:
+          list_item: "article[data-aid], div.res, [class*='result-item']"
+          title:     "h2 a, .title, [class*='job-title']"
+          employer:  "[class*='company'], [class*='advertiser']"
+          location:  "[class*='location'], [class*='loc']"
+          pay:       "[class*='salary'], [class*='pay']"
+          job_type:  "[class*='type'], [class*='contract']"
+          date:      "time, [class*='date'], [class*='listed']"
+          link:      "h2 a, a[href*='/details/']"
+
+      - id: careerone_au
+        name: "CareerOne Australia"
+        enabled: false  # Blocked: returns 403
+        url_template: "https://www.careerone.com.au/jobs/search?q={keyword}&where={city}&page={page}"
+        json_ld: true
+        rate_limit: 3
+        max_pages: 2
+        selectors:
+          list_item: "[data-testid='job-card'], article.job, .job-item"
+          title:     "h2, h3, [data-testid='job-title'], .title"
+          employer:  "[data-testid='job-company'], .company, [class*='employer']"
+          location:  "[data-testid='job-location'], .location"
+          pay:       "[data-testid='job-salary'], .salary"
+          job_type:  "[data-testid='job-type'], .work-type"
+          date:      "time, .date"
+          link:      "a[href*='/job/'], a[href*='/apply/']"
+
+  US:
+    boards:
+      - id: simplyhired_us
+        name: "SimplyHired USA"
+        enabled: false
+        url_template: "https://www.simplyhired.com/search?q={keyword}&l={city}&pn={page}"
+        json_ld: true
+        rate_limit: 4
+        max_pages: 2
+        selectors:
+          list_item: "[data-jobkey], .SerpJob-jobCard"
+          title:     ".jobposting-title, h2"
+          employer:  ".jobposting-company"
+          location:  ".jobposting-location"
+          pay:       ".jobposting-salary"
+          job_type:  ".jobposting-type"
+          date:      ".jobposting-date"
+          link:      "a[data-mdref='jobTitle']"
+
+  GB:
+    boards:
+      - id: reed_uk
+        name: "Reed.co.uk"
+        enabled: false
+        url_template: "https://www.reed.co.uk/jobs/{keyword}-jobs-in-{city}?pageno={page}"
+        json_ld: true
+        rate_limit: 3
+        max_pages: 2
+        selectors:
+          list_item: "article.job-result, [data-testid='job-card']"
+          title:     "h2, .job-result__title"
+          employer:  ".job-result__details__company"
+          location:  ".job-result__details__sector"
+          pay:       ".job-result__details__salary"
+          job_type:  ".job-result__details__type"
+          date:      "time, .job-result__details__posted"
+          link:      "a[href*='/jobs/'], h2 a"

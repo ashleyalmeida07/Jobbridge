@@ -1,0 +1,117 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours",
+                            "hoursInterval": 24
+                        }
+                    ]
+                }
+            },
+            "name": "Daily Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:8000/api/scrape/run",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "x-admin-key",
+                            "value": "admin_secret_123"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "1. Trigger Job Scraper",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "amount": 300,
+                "unit": "seconds"
+            },
+            "name": "2. Wait for Scrape",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1,
+            "position": [
+                750,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://localhost:8000/email/contacts",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Cookie",
+                            "value": "session=YOUR_SESSION_COOKIE_HERE"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "3. Fetch New Contacts",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1000,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Daily Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "1. Trigger Job Scraper",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "1. Trigger Job Scraper": {
+            "main": [
+                [
+                    {
+                        "node": "2. Wait for Scrape",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "2. Wait for Scrape": {
+            "main": [
+                [
+                    {
+                        "node": "3. Fetch New Contacts",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
