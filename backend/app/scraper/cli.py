@@ -44,12 +44,12 @@ async def cmd_run(args):
         keywords = [keyword] if keyword != "jobs" else ["barista", "retail", "warehouse"]
         jobs = await scrape_all_boards(keywords, city, country, limit_per_board=limit)
 
-    print(f"\n{'─'*60}")
+    print(f"\n{'-'*60}")
     print(f"Results: {len(jobs)} jobs")
-    print(f"{'─'*60}")
+    print(f"{'-'*60}")
     for j in jobs:
-        print(f"[{j.get('source','?')}] {j.get('title','?')} @ {j.get('employer','?')} — {j.get('location','?')} — {j.get('pay_text','N/A')}")
-    print(f"{'─'*60}\n")
+        print(f"[{j.get('source','?')}] {j.get('title','?')} @ {j.get('employer','?')} - {j.get('location','?')} - {j.get('pay_text','N/A')}")
+    print(f"{'-'*60}\n")
 
 
 async def cmd_boards(args):
