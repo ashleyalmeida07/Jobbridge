@@ -14,7 +14,17 @@ from app.api.scrape import router as scrape_router
 from app.api.jobs import router as jobs_router
 from app.api.email import router as email_router
 
-app = FastAPI(title=settings.PROJECT_NAME)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.services.telegram_bot import start_background_tasks
+    start_background_tasks()
+    yield
+    from app.services.telegram_bot import scheduler
+    scheduler.shutdown()
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 from starlette.middleware.sessions import SessionMiddleware
 app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
