@@ -257,3 +257,27 @@ async def email_stats(
         "total_pending": pending,
         "total_contacts": contacts,
     }
+
+
+class UpdateStatusRequest(BaseModel):
+    status: str
+
+@router.put("/queue/{item_id}/status")
+async def update_email_status(
+    item_id: int,
+    req: UpdateStatusRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update the status of a queued email (e.g. called by n8n after sending)."""
+    result = await db.execute(select(EmailQueue).filter(EmailQueue.id == item_id, EmailQueue.user_id == user.id))
+    eq = result.scalars().first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="Item not found")
+        
+    eq.status = req.status
+    if req.status == "sent":
+        eq.sent_at = datetime.now(timezone.utc)
+        
+    await db.commit()
+    return {"ok": True, "status": eq.status}

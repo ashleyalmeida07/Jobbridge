@@ -1,0 +1,163 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours",
+                            "hoursInterval": 24
+                        }
+                    ]
+                }
+            },
+            "name": "Daily Schedule",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "http://localhost:8000/email/queue?status=queued",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Cookie",
+                            "value": "session=YOUR_SESSION_COOKIE"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Fetch Queued Emails",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                300,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "items",
+                "options": {}
+            },
+            "name": "Split In Batches",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 2,
+            "position": [
+                500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "fromEmail": "YOUR_EMAIL@gmail.com",
+                "toEmail": "={{ $json.contact_email }}",
+                "subject": "={{ $json.subject }}",
+                "text": "={{ $json.body }}",
+                "options": {}
+            },
+            "name": "Send via Gmail",
+            "type": "n8n-nodes-base.gmail",
+            "typeVersion": 2,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "PUT",
+                "url": "=http://localhost:8000/email/queue/{{$json.id}}/status",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "status",
+                            "value": "sent"
+                        }
+                    ]
+                },
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Cookie",
+                            "value": "session=YOUR_SESSION_COOKIE"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Mark as Sent in DB",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                900,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Daily Schedule": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Queued Emails",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Queued Emails": {
+            "main": [
+                [
+                    {
+                        "node": "Split In Batches",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split In Batches": {
+            "main": [
+                [
+                    {
+                        "node": "Send via Gmail",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send via Gmail": {
+            "main": [
+                [
+                    {
+                        "node": "Mark as Sent in DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Mark as Sent in DB": {
+            "main": [
+                [
+                    {
+                        "node": "Split In Batches",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

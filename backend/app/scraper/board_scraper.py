@@ -117,6 +117,7 @@ def _extract_with_selectors(html: str, board: Dict, page_url: str) -> List[Dict[
             "job_type":    _text(selectors.get("job_type")),
             "posted_text": _text(selectors.get("date")),
             "source_url":  _href(selectors.get("link")),
+            "description": _text(selectors.get("description")),
         })
 
     return jobs

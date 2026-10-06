@@ -1,9 +1,9 @@
 """
-Profile API: per-step onboarding saves + /complete to trigger scraping.
+Profile API: per-step onboarding saves + /complete to mark onboarding done.
 """
 import os
 from typing import Union
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -15,7 +15,6 @@ from app.schemas.profile import (
     Step1Schema, Step2Schema, Step3Schema, Step4Schema, Step5Schema,
 )
 from app.services.geocode import geocode
-from app.services.scrape_runner import run_search_plan
 
 router = APIRouter()
 UPLOAD_DIR = "uploads"
@@ -177,30 +176,18 @@ async def upload_resume(
 
 @router.post("/complete")
 async def complete_onboarding(
-    background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Mark onboarding as done and kick off the background scrape pipeline.
+    Mark onboarding as done WITHOUT triggering scrape.
+    Scrape must be triggered separately via /scrape/start.
     """
     profile = await _get_or_create_profile(user, db)
     profile.onboarding_done = True
-    user.scrape_status = "pending"
-    user.scrape_job_count = 0
     await db.commit()
 
-    # Queue background scrape — FastAPI BackgroundTasks runs after the response
-    background_tasks.add_task(_run_scrape_bg, user.id)
-
-    return {"status": "ok", "message": "Onboarding complete. Scraping in progress."}
-
-
-async def _run_scrape_bg(user_id: int) -> None:
-    """Create a fresh DB session for the background task."""
-    from app.core.database import AsyncSessionLocal
-    async with AsyncSessionLocal() as db:
-        await run_search_plan(user_id, db)
+    return {"status": "ok", "message": "Onboarding complete."}
 
 
 # ── PUT /profile (legacy generic update) ─────────────────────────────────────

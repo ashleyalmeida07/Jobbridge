@@ -54,6 +54,7 @@ countries:
           job_type:  "[data-testid='searchSerpJobJobType'], .jobposting-type"
           date:      "[data-testid='searchSerpJobDateStamp'], .jobposting-date"
           link:      "a[data-testid='jobTitle'], a[href*='/job/'], a"
+          description: "[data-testid='searchSerpJobSnippet'], .jobposting-snippet, .summary, p.chakra-text"
 
       - id: adzuna_au
         name: "Adzuna Australia"

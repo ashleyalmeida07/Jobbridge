@@ -7,13 +7,46 @@ from sqlalchemy.future import select
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import User
+from app.models.models import User, Profile
 from app.api.auth import get_current_user
 
 router = APIRouter()
 
 
 from fastapi import BackgroundTasks
+
+@router.post("/start")
+async def start_scrape(
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """User-triggered: start scraping for the current user."""
+    from app.services.scrape_runner import run_search_plan
+    
+    # Check if user has completed onboarding by checking their profile
+    prof_result = await db.execute(select(Profile).filter(Profile.user_id == user.id))
+    profile = prof_result.scalars().first()
+    
+    if not profile or not profile.onboarding_done:
+        raise HTTPException(status_code=400, detail="Please complete onboarding first")
+    
+    # Reset scrape status
+    user.scrape_status = "pending"
+    user.scrape_job_count = 0
+    await db.commit()
+    
+    # Queue background scrape
+    async def _run_scrape_bg() -> None:
+        """Create a fresh DB session for the background task."""
+        from app.core.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as db_bg:
+            await run_search_plan(user.id, db_bg)
+    
+    background_tasks.add_task(_run_scrape_bg)
+    
+    return {"status": "started", "message": "Scraping started. Check status for updates."}
+
 
 @router.post("/run")
 async def run_scrapers(
