@@ -212,8 +212,8 @@ async def scrape_board(
 async def _enrich_emails(jobs: List[Dict[str, Any]], rate_limit: float = 4.0) -> List[Dict[str, Any]]:
     """Fetch job detail pages to extract contact emails for cold outreach."""
     for job in jobs:
-        if job.get("contact_email"):
-            continue  # already have one
+        if job.get("contact_email") and job.get("description"):
+            continue  # already have both
         detail_url = job.get("source_url", "")
         if not detail_url or not detail_url.startswith("http"):
             continue
@@ -261,9 +261,9 @@ async def scrape_all_boards(
             except Exception as e:
                 logger.error(f"Board {board['id']} crashed: {e}")
 
-    # Enrich top results with emails from detail pages (max 10 to be polite)
+    # Enrich top results with emails and descriptions from detail pages
     if results:
-        to_enrich = [j for j in results if j.get("source_url") and not j.get("contact_email")][:10]
+        to_enrich = [j for j in results if j.get("source_url") and (not j.get("contact_email") or not j.get("description"))][:15]
         if to_enrich:
             logger.info(f"Enriching {len(to_enrich)} jobs with email extraction from detail pages")
             await _enrich_emails(to_enrich)
