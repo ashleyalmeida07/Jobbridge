@@ -426,6 +426,20 @@ export default function JobsPage() {
               ))}
             </div>
             <button 
+              onClick={async () => {
+                try {
+                  const { getTelegramLinkToken } = await import('@/lib/api');
+                  const res = await getTelegramLinkToken();
+                  alert(`Send this exact message to @${res.bot_username} on Telegram:\n\n/start ${res.token}`);
+                } catch (e) {
+                  alert('Failed to generate Telegram code. Make sure backend is running.');
+                }
+              }}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-blue-100 text-blue-700 shadow-sm hover:bg-blue-200 h-9 px-4 py-2 gap-2"
+            >
+              Connect Telegram
+            </button>
+            <button 
               onClick={() => { setStartingScan(true); router.push('/scraping?autostart=true'); }}
               disabled={startingScan}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-slate-900 text-primary-foreground shadow hover:bg-slate-900/90 h-9 px-4 py-2 gap-2"
