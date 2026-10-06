@@ -270,13 +270,7 @@ function JobCard({ job, profile }: { job: JobItem; profile: ProfileData | null }
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleAutoApply}
-                disabled={autoApplying}
-                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl transition shadow-md hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
-              >
-                {autoApplying ? 'Opening Bot...' : 'AI Auto-Apply'}
-              </button>
+
               <a
                 href={job.source_url}
                 target="_blank"
