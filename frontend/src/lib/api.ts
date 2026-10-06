@@ -225,4 +225,3 @@ export const getEmailContacts = () =>
   apiFetch<{ total: number; items: EmailContact[] }>('/email/contacts');
 
 export const getEmailStats = () => apiFetch<EmailStats>('/email/stats');
-export const getTelegramLinkToken = () => apiFetch<{ token: string; bot_username: string }>('/telegram/link-token', { method: 'POST' });
