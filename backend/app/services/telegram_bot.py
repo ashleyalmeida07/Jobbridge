@@ -7,7 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.future import select
 
 from app.core.config import settings
-from app.core.database import async_session_maker
+from app.core.database import AsyncSessionLocal
 from app.models.models import User
 from app.services.scrape_runner import run_search_plan
 from app.api.telegram import LINK_TOKENS
@@ -43,7 +43,7 @@ async def process_telegram_update(update: dict):
             token = parts[1]
             user_id = LINK_TOKENS.get(token)
             if user_id:
-                async with async_session_maker() as db:
+                async with AsyncSessionLocal() as db:
                     result = await db.execute(select(User).filter(User.id == user_id))
                     user = result.scalars().first()
                     if user:
@@ -56,7 +56,7 @@ async def process_telegram_update(update: dict):
         else:
             await send_telegram_message(chat_id, "Welcome to JobBridge! Please link your account from the dashboard settings.")
     elif text.startswith("/scan"):
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             result = await db.execute(select(User).filter(User.telegram_chat_id == chat_id))
             user = result.scalars().first()
             if user:
@@ -90,7 +90,7 @@ async def telegram_poller():
 async def run_daily_scan_for_user(user_id: int, chat_id: str):
     """Runs the scan and sends results to Telegram."""
     try:
-        async with async_session_maker() as db:
+        async with AsyncSessionLocal() as db:
             await send_telegram_message(chat_id, "🔍 <b>Daily Job Scan</b> starting now...")
             await run_search_plan(user_id, db)
             
@@ -106,7 +106,7 @@ async def run_daily_scan_for_user(user_id: int, chat_id: str):
 async def trigger_daily_scans():
     """Triggered by APScheduler every day to run scans for all users with a linked Telegram."""
     logger.info("Triggering daily scans...")
-    async with async_session_maker() as db:
+    async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).filter(User.telegram_chat_id.isnot(None)))
         users = result.scalars().all()
         
