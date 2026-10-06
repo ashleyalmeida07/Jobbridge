@@ -300,6 +300,7 @@ export default function JobsPage() {
   const [filterVisa, setFilterVisa] = useState('');
   const [activeTab, setActiveTab] = useState<string>('All');
   const [startingScan, setStartingScan] = useState(false);
+  const [telegramData, setTelegramData] = useState<{ token: string; bot_username: string } | null>(null);
 
   const fetchJobs = useCallback(async (jobType?: string) => {
     setFetching(true);
@@ -430,7 +431,7 @@ export default function JobsPage() {
                 try {
                   const { getTelegramLinkToken } = await import('@/lib/api');
                   const res = await getTelegramLinkToken();
-                  alert(`Send this exact message to @${res.bot_username} on Telegram:\n\n/start ${res.token}`);
+                  setTelegramData(res);
                 } catch (e) {
                   alert('Failed to generate Telegram code. Make sure backend is running.');
                 }
@@ -580,6 +581,68 @@ export default function JobsPage() {
           </div>
         </div>
       </div>
+
+      {/* Telegram Modal */}
+      {telegramData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-center text-slate-900 mb-2">Connect Telegram</h2>
+              <p className="text-sm text-center text-slate-500 mb-6">
+                Get daily job alerts delivered directly to your Telegram app.
+              </p>
+              
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+                <p className="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wide">Step 1: Open Telegram</p>
+                <p className="text-sm text-slate-700 mb-4">
+                  Search for <span className="font-bold text-blue-600">@{telegramData.bot_username}</span>
+                </p>
+                
+                <p className="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wide">Step 2: Send this exact message</p>
+                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-2.5 shadow-sm">
+                  <code className="text-sm font-mono text-slate-800 break-all select-all">
+                    /start {telegramData.token}
+                  </code>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`/start ${telegramData.token}`);
+                      alert("Copied to clipboard!");
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setTelegramData(null)}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Close
+                </button>
+                <a 
+                  href={`https://t.me/${telegramData.bot_username}?start=${telegramData.token}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  Open App
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppSidebarLayout>
   );
 }
