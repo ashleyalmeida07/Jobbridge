@@ -225,7 +225,7 @@ export default function EmailPage() {
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition"
-                  placeholder="Regarding open positions at {company}"
+                  placeholder="Application for {job_title} role at {company}"
                 />
               </div>
 
@@ -234,9 +234,9 @@ export default function EmailPage() {
                 <textarea
                   value={body}
                   onChange={e => setBody(e.target.value)}
-                  rows={10}
+                  rows={12}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition resize-y"
-                  placeholder="Hi {company} Team..."
+                  placeholder="Dear Hiring Manager..."
                 />
               </div>
             </div>

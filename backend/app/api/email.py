@@ -35,15 +35,18 @@ class EmailSettings(BaseModel):
     send_hour: int = 9          # hour of day (0-23) in user's timezone
     send_minute: int = 0
     auto_send: bool = False     # whether n8n/cron should auto-send
-    default_subject: str = "Regarding open positions at {company}"
+    default_subject: str = "Application for {job_title} role at {company}"
     default_body: str = (
-        "Hi {company} Team,\n\n"
-        "I'm a student currently studying in {city} and I noticed your "
-        "company has open positions. I'm reaching out to express my interest "
-        "in the {job_title} role.\n\n"
-        "I'd love the opportunity to discuss how my skills and enthusiasm "
-        "could contribute to your team.\n\n"
-        "Best regards,\n{user_name}"
+        "Dear Hiring Manager,\n\n"
+        "I am writing to express my strong interest in the {job_title} position at {company}. "
+        "As a student based in {city}, I have been following your team's work and admire the "
+        "impact you are making in the industry.\n\n"
+        "I am eager to bring my strong academic background, proven work ethic, and adaptability to your team. "
+        "I thrive in dynamic environments and am confident that my skills align well with the requirements for this role.\n\n"
+        "I have attached my resume for your review and would welcome the opportunity to discuss how my qualifications "
+        "make me a strong fit for {company}.\n\n"
+        "Thank you for your time and consideration.\n\n"
+        "Sincerely,\n{user_name}"
     )
 
 class EmailQueueItem(BaseModel):
