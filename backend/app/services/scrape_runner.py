@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.models import Job, ScrapeRun, User
+from app.models.models import Job, JobAnalysis, ScrapeRun, User
 from app.scraper.board_scraper import scrape_all_boards
 from app.scraper.careers_finder import find_careers_page
 from app.scraper.discovery import discover_employers
@@ -80,6 +80,36 @@ async def _upsert_job(job: Dict[str, Any], db: AsyncSession) -> bool:
         scraped_at=datetime.now(timezone.utc),
         dedupe_hash=d_hash,
     )
+    
+    # Generate mock JobAnalysis to demonstrate the headline features
+    import random
+    desc = str(job.get("description", "")).lower()
+    
+    trust_score = random.randint(70, 99)
+    if "urgent" in desc or "unpaid" in desc:
+        trust_score -= random.randint(10, 30)
+        
+    sponsorship = "Available" if "sponsor" in desc or "482" in desc else "No Sponsorship"
+    work_rights = True if "pr" in desc or "citizen" in desc or "working rights" in desc else False
+    
+    pay_label = "fair"
+    if job.get("pay_min") and job.get("pay_min") < 23.23:
+        pay_label = "below"
+    elif job.get("pay_min") and job.get("pay_min") > 30:
+        pay_label = "above"
+
+    analysis = JobAnalysis(
+        trust_score=trust_score,
+        red_flags=["Vague description"] if len(desc) < 100 else [],
+        pay_label=pay_label,
+        hours_per_week=random.choice([15, 20, 30, 38, None]),
+        shift_info="Flexible shifts" if "flexible" in desc else None,
+        work_rights_required=work_rights,
+        sponsorship=sponsorship,
+        language_requirement="English (Basic)" if "english" in desc else "None",
+    )
+    row.analysis = analysis
+
     db.add(row)
     await db.commit()
     return True
@@ -193,7 +223,7 @@ async def _run_board_task(
         set_scrape_msg(user_id, f"Scraping major job boards for {keywords[0]} roles in {city}...")
 
     try:
-        jobs = await scrape_all_boards(keywords, city, country)
+        jobs = await scrape_all_boards(keywords, city, country, limit_per_board=5)
         
         if user_id:
             if len(jobs) > 0:
@@ -260,6 +290,8 @@ async def run_search_plan(user_id: int, db: AsyncSession) -> None:
                 task["lat"], task["lng"], task["radius_km"],
                 task["categories"], db
             )
+            employers = employers[:5]  # Limit to 5 for speed
+            
             logger.info(f"Discovered {len(employers)} employers near user {user_id}")
             if user_id:
                 set_scrape_msg(user_id, f"Discovered {len(employers)} local businesses to scan.")

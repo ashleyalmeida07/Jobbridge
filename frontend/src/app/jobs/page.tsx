@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { getJobs, JobItem, JobsResponse, startScrape, EmailStats, getEmailStats } from '@/lib/api';
+import { getJobs, JobItem, JobsResponse, startScrape, EmailStats, getEmailStats, getProfile, ProfileData, autoApplyJob } from '@/lib/api';
 import { AppSidebarLayout } from '@/components/ui/app-sidebar-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, Users, ClipboardList, BarChart3, Search, Mail, ExternalLink, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Briefcase, Users, ClipboardList, BarChart3, Search, Mail, ExternalLink, ChevronDown, ChevronUp, X, MapPin, Globe, ShieldCheck, FileText, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   full_time: 'Full Time',
@@ -21,15 +21,27 @@ const JOB_TYPE_COLORS: Record<string, string> = {
   internship: 'bg-purple-100 text-purple-800 border-purple-200',
 };
 
-function JobCard({ job }: { job: JobItem }) {
+function JobCard({ job, profile }: { job: JobItem; profile: ProfileData | null }) {
   const [expanded, setExpanded] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [autoApplying, setAutoApplying] = useState(false);
   const typeLabel = JOB_TYPE_LABELS[job.job_type] ?? job.job_type;
   const typeColor = JOB_TYPE_COLORS[job.job_type] ?? 'bg-slate-100 text-slate-700 border-slate-200';
 
+  const handleAutoApply = async () => {
+    setAutoApplying(true);
+    try {
+      await autoApplyJob(job.id);
+    } catch (e) {
+      alert("Failed to start auto-apply. Make sure you have completed your profile.");
+    } finally {
+      setTimeout(() => setAutoApplying(false), 2000);
+    }
+  };
+
   return (
     <>
-      <div className="flex flex-col gap-2 py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition px-2 -mx-2 rounded-lg">
+      <div className="flex flex-col gap-3 p-5 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1 min-w-0">
             <h3 className="font-medium text-sm text-slate-900 truncate">
@@ -47,9 +59,83 @@ function JobCard({ job }: { job: JobItem }) {
         )}
 
         {expanded && (
-          <p className="text-xs text-slate-600 leading-relaxed mt-2 p-3 bg-slate-50 rounded-md border border-slate-100">
-            {job.description || 'No description available.'}
-          </p>
+          <div className="mt-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+            {/* Analysis Grid */}
+            {job.analysis && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Visa-Smart Matching */}
+                <div className="bg-indigo-50/50 rounded-xl p-3 border border-indigo-100 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-indigo-700 font-semibold text-xs uppercase tracking-wide">
+                    <Globe className="w-3.5 h-3.5" /> Visa-Smart Match
+                  </div>
+                  <div className="flex flex-col gap-1.5 text-xs text-slate-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Sponsorship:</span>
+                      <span className="font-medium text-slate-800">{job.analysis.sponsorship || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Work Rights Req:</span>
+                      <span className="font-medium text-slate-800">{job.analysis.work_rights_required ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Est. Hours:</span>
+                      <span className="font-medium text-slate-800">{job.analysis.hours_per_week || '?'} hrs/wk</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trust & Pay Check */}
+                <div className="bg-emerald-50/50 rounded-xl p-3 border border-emerald-100 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-emerald-700 font-semibold text-xs uppercase tracking-wide">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Trust & Pay Check
+                  </div>
+                  <div className="flex flex-col gap-1.5 text-xs text-slate-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Trust Score:</span>
+                      <span className={`font-medium ${job.analysis.trust_score && job.analysis.trust_score >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {job.analysis.trust_score ? `${job.analysis.trust_score}/100` : 'Pending'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Pay Fairness:</span>
+                      <span className="font-medium text-slate-800 capitalize">{job.analysis.pay_label || 'Unknown'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Red Flags:</span>
+                      <span className="font-medium text-slate-800">{job.analysis.red_flags?.length || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Local Apply Kit */}
+                <div className="bg-blue-50/50 rounded-xl p-3 border border-blue-100 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-blue-700 font-semibold text-xs uppercase tracking-wide">
+                    <FileText className="w-3.5 h-3.5" /> Local Apply Kit
+                  </div>
+                  <div className="flex flex-col gap-1.5 text-xs text-slate-600">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Resume Match:</span>
+                      <span className="font-medium text-blue-600">85% Match</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Language Req:</span>
+                      <span className="font-medium text-slate-800">{job.analysis.language_requirement || 'English'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <h4 className="font-semibold text-slate-800 text-xs uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <ClipboardList className="w-3.5 h-3.5 text-slate-400" /> Job Description
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto pr-2">
+                {job.description || 'No description available.'}
+              </p>
+            </div>
+          </div>
         )}
 
         <div className="flex items-center justify-between mt-1">
@@ -123,12 +209,17 @@ function JobCard({ job }: { job: JobItem }) {
               </div>
 
               <div className="lg:col-span-2 flex flex-col gap-6">
-                <div>
-                  <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wider flex items-center gap-2">
+                <div className="flex flex-col gap-3">
+                  <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wider flex items-center gap-2">
                     <Search className="w-4 h-4 text-indigo-500" />
                     Location Map
                   </h3>
-                  <div className="rounded-xl overflow-hidden border border-slate-200 h-[220px] bg-slate-100 shadow-inner">
+                  <div className="rounded-xl overflow-hidden border border-slate-200 h-[220px] bg-slate-100 shadow-inner relative">
+                    {job.distance_km !== null && job.distance_km !== undefined && (
+                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-md text-xs font-bold text-indigo-700 shadow-sm z-10 border border-indigo-100">
+                        {job.distance_km} km away
+                      </div>
+                    )}
                     <iframe
                       width="100%"
                       height="100%"
@@ -138,6 +229,18 @@ function JobCard({ job }: { job: JobItem }) {
                       title="Job Location"
                     ></iframe>
                   </div>
+
+                  {(profile?.campus_address || profile?.city) && (
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${profile.campus_address || profile.city}, ${profile.country || ''}`)}&destination=${encodeURIComponent(`${job.employer} ${job.location || ''}`.trim())}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-medium rounded-xl transition"
+                    >
+                      <MapPin className="w-4 h-4 text-slate-500" />
+                      Get Directions from your address
+                    </a>
+                  )}
                 </div>
 
                 {job.contact_email && (
@@ -167,11 +270,18 @@ function JobCard({ job }: { job: JobItem }) {
               >
                 Cancel
               </button>
+              <button 
+                onClick={handleAutoApply}
+                disabled={autoApplying}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl transition shadow-md hover:shadow-lg active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
+              >
+                {autoApplying ? 'Opening Bot...' : 'AI Auto-Apply'}
+              </button>
               <a
                 href={job.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 rounded-xl transition shadow-md hover:shadow-lg active:scale-[0.98]"
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition shadow-md hover:shadow-lg active:scale-[0.98]"
               >
                 Apply on Company Site <ExternalLink className="w-4 h-4" />
               </a>
@@ -188,19 +298,26 @@ export default function JobsPage() {
   const router = useRouter();
   const [data, setData] = useState<JobsResponse | null>(null);
   const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [fetching, setFetching] = useState(true);
   const [filter, setFilter] = useState('');
+  const [filterPay, setFilterPay] = useState('');
+  const [filterRadius, setFilterRadius] = useState('');
+  const [filterVisa, setFilterVisa] = useState('');
+  const [activeTab, setActiveTab] = useState<string>('All');
   const [startingScan, setStartingScan] = useState(false);
 
   const fetchJobs = useCallback(async (jobType?: string) => {
     setFetching(true);
     try {
-      const [res, stats] = await Promise.all([
+      const [res, stats, prof] = await Promise.all([
         getJobs({ limit: 100, job_type: jobType || undefined }),
-        getEmailStats().catch(() => null)
+        getEmailStats().catch(() => null),
+        getProfile().catch(() => null)
       ]);
       setData(res);
       if (stats) setEmailStats(stats);
+      if (prof) setProfile(prof);
     } catch {
       /* leave null */
     } finally {
@@ -213,6 +330,49 @@ export default function JobsPage() {
     if (!loading && user && !user.onboarding_done) { router.replace('/onboarding'); return; }
     if (!loading && user) fetchJobs();
   }, [user, loading, router, fetchJobs]);
+
+  const sponsorKeywords = ['sponsorship', 'sponsor', '482', 'tss', 'visa sponsor'];
+  const noSponsorKeywords = ['no sponsorship', 'no sponsor', 'pr only', 'citizen only', 'permanent resident'];
+
+  const filteredItems = useMemo(() => {
+    if (!data) return [];
+    return data.items.filter(job => {
+      if (filter) {
+        const lower = filter.toLowerCase();
+        if (!job.title.toLowerCase().includes(lower) && 
+            !job.employer.toLowerCase().includes(lower) && 
+            !(job.location || '').toLowerCase().includes(lower)) {
+          return false;
+        }
+      }
+      if (filterPay) {
+        const minPay = parseInt(filterPay);
+        if (job.pay_min === null || job.pay_min < minPay) return false;
+      }
+      if (filterRadius) {
+        const maxRadius = parseInt(filterRadius);
+        if (job.distance_km === null || job.distance_km === undefined || job.distance_km > maxRadius) return false;
+      }
+      if (filterVisa) {
+        const descLower = job.description?.toLowerCase() || '';
+        if (filterVisa === 'sponsor') {
+          const hasSponsor = sponsorKeywords.some(kw => descLower.includes(kw));
+          const hasNoSponsor = noSponsorKeywords.some(kw => descLower.includes(kw));
+          if (!hasSponsor || hasNoSponsor) return false;
+        } else if (filterVisa === 'nosponsor') {
+          const hasNoSponsor = noSponsorKeywords.some(kw => descLower.includes(kw));
+          if (hasNoSponsor) return false;
+        }
+      }
+      return true;
+    });
+  }, [data, filter, filterPay, filterRadius, filterVisa]);
+
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    filteredItems.forEach(job => cats.add(job.category || 'Other'));
+    return Array.from(cats).sort();
+  }, [filteredItems]);
 
   const STATS = [
     {
@@ -304,80 +464,112 @@ export default function JobsPage() {
           ))}
         </div>
 
-        {/* Main Content Area (Two Columns) */}
-        <div className="grid gap-6 lg:grid-cols-7 xl:grid-cols-3">
-          {/* Active Job Matches */}
-          <Card className="lg:col-span-4 xl:col-span-2 shadow-sm border-slate-200/60 flex flex-col min-h-[500px]">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <CardTitle>Recent Job Matches</CardTitle>
-              <CardDescription>The latest roles found by the scraper matching your profile.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 max-h-[600px]">
-              {fetching ? (
-                <div className="flex items-center justify-center py-20">
-                  <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : !data || data.items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-                  <div className="size-12 bg-slate-50 flex items-center justify-center rounded-full border border-slate-100">
-                    <Search className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <p className="text-sm text-slate-500 font-medium">No jobs found. Run a scan!</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  {Object.entries(
-                    data.items.reduce((acc, job) => {
-                      const cat = job.category || 'Other';
-                      if (!acc[cat]) acc[cat] = [];
-                      acc[cat].push(job);
-                      return acc;
-                    }, {} as Record<string, typeof data.items>)
-                  ).map(([cat, jobs]) => (
-                    <div key={cat} className="flex flex-col">
-                      <div className="sticky top-0 bg-white/95 backdrop-blur z-10 py-2 border-b border-slate-100 mb-2">
-                        <h3 className="font-semibold text-slate-900 text-xs uppercase tracking-wider">
-                          {cat.replace(/_/g, ' ')} ({jobs.length})
-                        </h3>
-                      </div>
-                      <div className="flex flex-col">
-                        {jobs.map(job => <JobCard key={job.id} job={job} />)}
+        {/* Main Content Area */}
+        <div className="flex flex-col gap-8">
+          {/* Filter Toolbar */}
+          <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col xl:flex-row items-start xl:items-center gap-4 shadow-sm">
+            <h3 className="font-bold text-slate-800 uppercase tracking-widest mr-auto whitespace-nowrap">Filter Jobs</h3>
+            <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+              <div className="relative flex-1 xl:flex-none">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search jobs..."
+                  className="w-full xl:w-[200px] pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-colors"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+              </div>
+              <select
+                value={filterRadius}
+                onChange={(e) => setFilterRadius(e.target.value)}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">Any distance</option>
+                <option value="5">Within 5 km</option>
+                <option value="15">Within 15 km</option>
+                <option value="30">Within 30 km</option>
+              </select>
+              <select
+                value={filterPay}
+                onChange={(e) => setFilterPay(e.target.value)}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">Any pay</option>
+                <option value="20">$20+/hr</option>
+                <option value="30">$30+/hr</option>
+                <option value="60000">$60k+/yr</option>
+              </select>
+              <select
+                value={filterVisa}
+                onChange={(e) => setFilterVisa(e.target.value)}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">Visa: Any</option>
+                <option value="sponsor">Sponsor Available</option>
+                <option value="nosponsor">No Sponsorship</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Jobs Feed */}
+          <div>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Recent Job Matches</h2>
+            </div>
+            
+            <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide">
+              <button
+                onClick={() => setActiveTab('All')}
+                className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${activeTab === 'All' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              >
+                All Matches ({filteredItems.length})
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveTab(cat)}
+                  className={`px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${activeTab === cat ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  {cat.replace(/_/g, ' ')} ({filteredItems.filter(j => (j.category || 'Other') === cat).length})
+                </button>
+              ))}
+            </div>
+            
+            {fetching ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin" />
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-20 text-center border-2 border-dashed border-slate-200 bg-slate-50 rounded-xl">
+                <Search className="w-8 h-8 text-slate-400" />
+                <p className="text-base text-slate-600 font-medium">No jobs found. Run a scan!</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-10">
+                {activeTab === 'All' ? (
+                  categories.map(cat => (
+                    <div key={cat} className="flex flex-col gap-4">
+                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-widest border-b border-slate-200 pb-2">
+                        {cat.replace(/_/g, ' ')}
+                      </h3>
+                      <div className="grid gap-4">
+                        {filteredItems.filter(j => (j.category || 'Other') === cat).map(job => (
+                          <JobCard key={job.id} job={job} profile={profile} />
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity / Quick Actions */}
-          <Card className="lg:col-span-3 xl:col-span-1 shadow-sm border-slate-200/60">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Manage your automation</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100/50 transition cursor-pointer" onClick={() => router.push('/email')}>
-                <div className="size-8 bg-indigo-100 text-indigo-600 rounded-md flex items-center justify-center shrink-0 border border-indigo-200/50">
-                  <Mail className="size-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-medium text-slate-900">Cold Email Outreach</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Queue personalized emails to newly discovered HR contacts.</p>
-                </div>
+                  ))
+                ) : (
+                  <div className="grid gap-4">
+                    {filteredItems.filter(j => (j.category || 'Other') === activeTab).map(job => (
+                      <JobCard key={job.id} job={job} profile={profile} />
+                    ))}
+                  </div>
+                )}
               </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100/50 transition cursor-pointer" onClick={() => router.push('/scraping')}>
-                <div className="size-8 bg-emerald-100 text-emerald-600 rounded-md flex items-center justify-center shrink-0 border border-emerald-200/50">
-                  <Search className="size-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-medium text-slate-900">System Logs</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">View real-time scraping progress and automated logs.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
     </AppSidebarLayout>

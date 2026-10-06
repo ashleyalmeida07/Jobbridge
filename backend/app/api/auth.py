@@ -91,7 +91,8 @@ async def auth_via_google(request: Request, response: Response, db: AsyncSession
         value=f"Bearer {access_token}",
         httponly=True,
         samesite="lax",
-        secure=False  # Set True in production with HTTPS
+        secure=False,  # Set True in production with HTTPS
+        max_age=30 * 24 * 60 * 60,  # 30 days
     )
     return res
 

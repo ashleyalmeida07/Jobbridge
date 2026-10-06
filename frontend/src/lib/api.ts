@@ -100,6 +100,17 @@ export const startScrape = () => apiFetch('/scrape/start', { method: 'POST' });
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────
 
+export interface JobAnalysis {
+  trust_score: number | null;
+  red_flags: string[];
+  pay_label: string | null;
+  hours_per_week: number | null;
+  shift_info: string | null;
+  work_rights_required: boolean | null;
+  sponsorship: string | null;
+  language_requirement: string | null;
+}
+
 export interface JobItem {
   id: number;
   title: string;
@@ -112,9 +123,14 @@ export interface JobItem {
   pay_max: number | null;
   source: string;
   source_url: string;
+  lat?: number;
+  lng?: number;
+  distance_km?: number;
   description: string;
+  contact_email?: string | null;
   posted_at: string | null;
   scraped_at: string | null;
+  analysis?: JobAnalysis | null;
 }
 
 export interface JobsResponse {
@@ -129,6 +145,9 @@ export const getJobs = (params?: { limit?: number; offset?: number; job_type?: s
   if (params?.job_type) qs.set('job_type', params.job_type);
   return apiFetch<JobsResponse>(`/jobs?${qs}`);
 };
+
+export const autoApplyJob = (jobId: number) =>
+  apiFetch<{ status: string; message: string }>(`/jobs/${jobId}/auto-apply`, { method: 'POST' });
 
 // ── Country config ────────────────────────────────────────────────────────────
 

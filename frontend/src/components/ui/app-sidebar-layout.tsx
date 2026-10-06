@@ -73,6 +73,13 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
         <SidebarNav>
           <SidebarSection label="Dashboard">
             <SidebarItem
+              icon={<IconLayoutDashboard className="size-[18px]" stroke={1.75} />}
+              active={pathname === '/'}
+              onClick={() => router.push('/')}
+            >
+              Home Page
+            </SidebarItem>
+            <SidebarItem
               icon={<IconBriefcase className="size-[18px]" stroke={1.75} />}
               active={pathname === '/jobs'}
               onClick={() => router.push('/jobs')}

@@ -1,3 +1,8 @@
+import sys
+import asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings

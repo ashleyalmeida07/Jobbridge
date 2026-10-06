@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getScrapeStatus, startScrape } from '@/lib/api';
-import { Check, AlertCircle, Search, Briefcase, Globe, MapPin, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { Check, AlertCircle, Search, Briefcase, Globe, MapPin, CheckCircle2, Loader2, AlertTriangle, ShieldCheck, FileText } from "lucide-react";
 import { AppSidebarLayout } from '@/components/ui/app-sidebar-layout';
 import { useAuth } from '@/lib/auth-context';
 import { Timeline } from '@/components/ui/timeline';
@@ -14,7 +14,9 @@ const SCAN_STEPS = [
   { id: 4, label: 'Complete', description: 'Finalizing results' },
 ];
 
-export default function ScrapingPage() {
+import { Suspense } from 'react';
+
+function ScrapingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const autoStart = searchParams?.get('autostart') === 'true';
@@ -152,34 +154,41 @@ export default function ScrapingPage() {
 
             {/* Features Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-8">
-              <div className="group bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <Briefcase className="w-7 h-7 text-white" />
+              <div className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <Globe className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-bold text-slate-900 mb-2 text-lg">Smart Matching</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Advanced algorithms match jobs to your skills, experience, and career preferences
-                </p>
+                <h3 className="font-bold text-slate-900 mb-3 text-lg">Visa-Smart Matching</h3>
+                <ul className="text-sm text-slate-600 space-y-2 leading-relaxed">
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Hours, work rights, and sponsorship extracted</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Filtered against your student hour cap</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Language-barrier tags & weekly hour tracker</li>
+                </ul>
               </div>
 
-              <div className="group bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <Globe className="w-7 h-7 text-white" />
+              <div className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <ShieldCheck className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-bold text-slate-900 mb-2 text-lg">Multi-Source</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Aggregates opportunities from major job boards and company career pages
-                </p>
+                <h3 className="font-bold text-slate-900 mb-3 text-lg">Trust & Pay Check</h3>
+                <ul className="text-sm text-slate-600 space-y-2 leading-relaxed">
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Scam red flags and a dedicated trust score</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Pay fairness label (below, fair, or above)</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> "Student-friendly employer" signal</li>
+                </ul>
               </div>
 
-              <div className="group bg-white border border-slate-200 rounded-2xl p-8 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <MapPin className="w-7 h-7 text-white" />
+              <div className="group bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                  <FileText className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-bold text-slate-900 mb-2 text-lg">Location Filter</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Shows only positions within your specified commute radius
-                </p>
+                <h3 className="font-bold text-slate-900 mb-3 text-lg">Local Apply Kit</h3>
+                <ul className="text-sm text-slate-600 space-y-2 leading-relaxed">
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Resume localization & tailoring with match score</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Qualification and grade explainer</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Cover letter prep with local etiquette</li>
+                  <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /> Cold email automation: Draft, approve & send</li>
+                </ul>
               </div>
             </div>
 
@@ -188,7 +197,7 @@ export default function ScrapingPage() {
               <button
                 onClick={handleStartScan}
                 disabled={starting}
-                className="group px-10 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 text-lg active:scale-[0.97]"
+                className="group px-10 py-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 text-lg active:scale-[0.98]"
               >
                 {starting ? (
                   <>
@@ -316,5 +325,20 @@ export default function ScrapingPage() {
         )}
       </main>
     </AppSidebarLayout>
+  );
+}
+
+export default function ScrapingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-200 rounded-full"></div>
+          <div className="text-slate-500 font-medium text-lg">Loading Scanner...</div>
+        </div>
+      </div>
+    }>
+      <ScrapingContent />
+    </Suspense>
   );
 }

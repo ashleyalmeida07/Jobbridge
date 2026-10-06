@@ -6,6 +6,7 @@ import math
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy.future import select
 
 from app.core.database import get_db
@@ -76,7 +77,7 @@ async def list_jobs(
     profile = prof_result.scalars().first()
 
     # Fetch all jobs (TODO: add DB-level filtering for large datasets)
-    query = select(Job)
+    query = select(Job).options(selectinload(Job.analysis))
     if job_type:
         query = query.filter(Job.job_type == job_type)
     result = await db.execute(query)
@@ -102,11 +103,60 @@ async def list_jobs(
                 "pay_max": j.pay_max,
                 "source": j.source,
                 "source_url": j.source_url,
+                "category": j.category,
+                "lat": j.lat,
+                "lng": j.lng,
+                "distance_km": round(_haversine_km(profile.lat, profile.lng, j.lat, j.lng), 1) if profile and profile.lat and j.lat else None,
                 "description": j.description,
                 "contact_email": j.contact_email,
                 "posted_at": j.posted_at.isoformat() if j.posted_at else None,
                 "scraped_at": j.scraped_at.isoformat() if j.scraped_at else None,
+                "analysis": {
+                    "trust_score": j.analysis.trust_score if j.analysis else None,
+                    "red_flags": j.analysis.red_flags if j.analysis else [],
+                    "pay_label": j.analysis.pay_label if j.analysis else None,
+                    "hours_per_week": j.analysis.hours_per_week if j.analysis else None,
+                    "shift_info": j.analysis.shift_info if j.analysis else None,
+                    "work_rights_required": j.analysis.work_rights_required if j.analysis else None,
+                    "sponsorship": j.analysis.sponsorship if j.analysis else None,
+                    "language_requirement": j.analysis.language_requirement if j.analysis else None,
+                } if j.analysis else None
             }
             for j in paginated
         ],
     }
+
+
+from fastapi import BackgroundTasks, HTTPException
+from app.services.auto_apply import run_auto_apply
+
+@router.post("/{job_id}/auto-apply")
+async def auto_apply_job(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Launch Playwright in the background to auto-fill the application."""
+    # 1. Get Job
+    job_result = await db.execute(select(Job).filter(Job.id == job_id))
+    job = job_result.scalars().first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    if not job.source_url:
+        raise HTTPException(status_code=400, detail="Job has no source URL to apply to")
+        
+    # 2. Get Profile
+    prof_result = await db.execute(select(Profile).filter(Profile.user_id == user.id))
+    profile = prof_result.scalars().first()
+    profile.user = user  # Attach user for email access
+    
+    if not profile:
+        raise HTTPException(status_code=400, detail="Profile required")
+        
+    # 3. Queue Playwright task
+    # We run it in a background task so the API responds instantly
+    background_tasks.add_task(run_auto_apply, profile, job.source_url)
+    
+    return {"status": "started", "message": "Opening browser..."}
