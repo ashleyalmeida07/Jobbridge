@@ -40,8 +40,25 @@ async def start_scrape(
     async def _run_scrape_bg() -> None:
         """Create a fresh DB session for the background task."""
         from app.core.database import AsyncSessionLocal
+        from app.services.telegram_bot import send_telegram_message
+        
         async with AsyncSessionLocal() as db_bg:
+            # Re-fetch user in new session to check telegram
+            result = await db_bg.execute(select(User).filter(User.id == user.id))
+            u = result.scalars().first()
+            chat_id = u.telegram_chat_id if u else None
+            
+            if chat_id:
+                await send_telegram_message(chat_id, "🔍 <b>Manual Job Scan</b> started from Dashboard...")
+                
             await run_search_plan(user.id, db_bg)
+            
+            # Re-fetch after scan to get updated job count
+            if chat_id:
+                result = await db_bg.execute(select(User).filter(User.id == user.id))
+                u = result.scalars().first()
+                if u:
+                    await send_telegram_message(chat_id, f"✅ <b>Scan Complete!</b>\n\nFound {u.scrape_job_count} matching opportunities. Check your dashboard to view them.")
     
     background_tasks.add_task(_run_scrape_bg)
     
