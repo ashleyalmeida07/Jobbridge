@@ -2,7 +2,7 @@
 
 Welcome to **JobBridge**, a dedicated job discovery platform tailored specifically for international students. JobBridge aggregates part-time, casual, and internship roles while taking into account the unique constraints international students face, such as visa restrictions, work-hour caps, and the need for hyper-local casual work.
 
-[INSERT YOUR VIDEO WALKTHROUGH LINK HERE]
+**🎥 Video Walkthrough:** [Watch the demo here](https://drive.google.com/file/d/1qNnJl4hJeoz5-_P3tlDCJSAwM8ZLh1Rv/view?usp=sharing)
 
 ---
 
