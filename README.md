@@ -1,4 +1,4 @@
-# JobBridge - GradGuide Assignment
+# JobBridge
 
 Welcome to **JobBridge**, a dedicated job discovery platform tailored specifically for international students. JobBridge aggregates part-time, casual, and internship roles while taking into account the unique constraints international students face, such as visa restrictions, work-hour caps, and the need for hyper-local casual work.
 
