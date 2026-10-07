@@ -83,7 +83,8 @@ async def auth_via_google(request: Request, response: Response, db: AsyncSession
     prof_result = await db.execute(select(Profile).filter(Profile.user_id == user.id))
     profile = prof_result.scalars().first()
     onboarding_done = profile.onboarding_done if profile else False
-    redirect_url = f"{settings.FRONTEND_URL}/jobs" if onboarding_done else f"{settings.FRONTEND_URL}/onboarding"
+    frontend_url = settings.FRONTEND_URL.rstrip('/')
+    redirect_url = f"{frontend_url}/jobs" if onboarding_done else f"{frontend_url}/onboarding"
 
     res = RedirectResponse(url=redirect_url)
     is_production = "localhost" not in settings.FRONTEND_URL
