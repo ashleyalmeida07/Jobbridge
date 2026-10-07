@@ -223,7 +223,7 @@ async def _run_board_task(
         set_scrape_msg(user_id, f"Scraping major job boards for {keywords[0]} roles in {city}...")
 
     try:
-        jobs = await scrape_all_boards(keywords, city, country, limit_per_board=5)
+        jobs = await scrape_all_boards(keywords, city, country, limit_per_board=25)
         
         if user_id:
             if len(jobs) > 0:
@@ -290,7 +290,7 @@ async def run_search_plan(user_id: int, db: AsyncSession) -> None:
                 task["lat"], task["lng"], task["radius_km"],
                 task["categories"], db
             )
-            employers = employers[:5]  # Limit to 5 for speed
+            employers = employers[:25]  # Limit to 25 for speed
             
             logger.info(f"Discovered {len(employers)} employers near user {user_id}")
             if user_id:
