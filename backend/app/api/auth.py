@@ -138,7 +138,8 @@ async def get_me(user: User = Depends(get_current_user_optional), db: AsyncSessi
 
 @router.post("/logout")
 async def logout(response: Response):
-    res = Response(status_code=200, content="Logged out")
+    from fastapi.responses import JSONResponse
+    res = JSONResponse(status_code=200, content={"message": "Logged out"})
     is_production = "localhost" not in settings.FRONTEND_URL
     res.delete_cookie(
         "access_token",
