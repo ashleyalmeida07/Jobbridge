@@ -64,13 +64,23 @@ async def start_scrape(
                     await send_telegram_message(chat_id, f"✅ <b>Scan Complete!</b>\n\nFound {u.scrape_job_count} matching opportunities. Check your dashboard to view them.")
                     if u.scrape_job_count > 0:
                         num_to_fetch = min(u.scrape_job_count, 5)
-                        job_result = await db_bg.execute(select(Job).order_by(Job.scraped_at.desc()).limit(num_to_fetch))
+                        from sqlalchemy.orm import joinedload
+                        job_result = await db_bg.execute(select(Job).options(joinedload(Job.analysis)).order_by(Job.scraped_at.desc()).limit(num_to_fetch))
                         new_jobs = job_result.scalars().all()
                         
                         for job in new_jobs:
                             msg_text = f"🏢 <b>{job.employer}</b>\n💼 <b>{job.title}</b>\n📍 {job.location}"
+                            if job.job_type:
+                                msg_text += f"\n🏷️ {job.job_type.capitalize()}"
                             if job.pay_text:
                                 msg_text += f"\n💰 {job.pay_text}"
+                            if job.analysis:
+                                if job.analysis.sponsorship:
+                                    msg_text += f"\n🌍 Sponsorship: {job.analysis.sponsorship}"
+                                if job.analysis.hours_per_week:
+                                    msg_text += f"\n⏱️ Est. Hours: {job.analysis.hours_per_week}/wk"
+                                if job.analysis.trust_score:
+                                    msg_text += f"\n🛡️ Trust Score: {job.analysis.trust_score}/100"
                                 
                             markup = {
                                 "inline_keyboard": [
