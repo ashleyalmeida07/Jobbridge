@@ -86,12 +86,13 @@ async def auth_via_google(request: Request, response: Response, db: AsyncSession
     redirect_url = f"{settings.FRONTEND_URL}/jobs" if onboarding_done else f"{settings.FRONTEND_URL}/onboarding"
 
     res = RedirectResponse(url=redirect_url)
+    is_production = "localhost" not in settings.FRONTEND_URL
     res.set_cookie(
         key="access_token",
         value=f"Bearer {access_token}",
         httponly=True,
-        samesite="lax",
-        secure=False,  # Set True in production with HTTPS
+        samesite="none" if is_production else "lax",
+        secure=is_production,
         max_age=30 * 24 * 60 * 60,  # 30 days
     )
     return res
@@ -138,5 +139,11 @@ async def get_me(user: User = Depends(get_current_user_optional), db: AsyncSessi
 @router.post("/logout")
 async def logout(response: Response):
     res = Response(status_code=200, content="Logged out")
-    res.delete_cookie("access_token")
+    is_production = "localhost" not in settings.FRONTEND_URL
+    res.delete_cookie(
+        "access_token",
+        httponly=True,
+        samesite="none" if is_production else "lax",
+        secure=is_production
+    )
     return res
