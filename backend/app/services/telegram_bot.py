@@ -17,13 +17,17 @@ logger = logging.getLogger(__name__)
 # Initialize scheduler
 scheduler = AsyncIOScheduler()
 
-async def send_telegram_message(chat_id: str, text: str):
+async def send_telegram_message(chat_id: str, text: str, reply_markup: dict = None):
     if not settings.TELEGRAM_BOT_TOKEN:
         return
     url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+        
     async with httpx.AsyncClient() as client:
         try:
-            await client.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"})
+            await client.post(url, json=payload)
         except Exception as e:
             logger.error(f"Failed to send telegram message: {e}")
 
@@ -89,6 +93,7 @@ async def telegram_poller():
 
 async def run_daily_scan_for_user(user_id: int, chat_id: str):
     """Runs the scan and sends results to Telegram."""
+    from app.models.models import Job
     try:
         async with AsyncSessionLocal() as db:
             await send_telegram_message(chat_id, "🔍 <b>Daily Job Scan</b> starting now...")
@@ -98,7 +103,28 @@ async def run_daily_scan_for_user(user_id: int, chat_id: str):
             result = await db.execute(select(User).filter(User.id == user_id))
             user = result.scalars().first()
             if user:
-                await send_telegram_message(chat_id, f"✅ <b>Scan Complete!</b>\n\nFound {user.scrape_job_count} matching opportunities today. Check your dashboard to view them and apply.")
+                await send_telegram_message(chat_id, f"✅ <b>Scan Complete!</b>\n\nFound {user.scrape_job_count} matching opportunities today.")
+                
+                if user.scrape_job_count > 0:
+                    # Fetch the most recent jobs
+                    num_to_fetch = min(user.scrape_job_count, 5) # Send top 5 max to avoid spam
+                    job_result = await db.execute(select(Job).order_by(Job.scraped_at.desc()).limit(num_to_fetch))
+                    new_jobs = job_result.scalars().all()
+                    
+                    for job in new_jobs:
+                        msg_text = f"🏢 <b>{job.employer}</b>\n💼 <b>{job.title}</b>\n📍 {job.location}"
+                        if job.pay_text:
+                            msg_text += f"\n💰 {job.pay_text}"
+                            
+                        markup = {
+                            "inline_keyboard": [
+                                [{"text": "Apply on Company Site", "url": job.source_url}]
+                            ]
+                        } if job.source_url else None
+                        
+                        await send_telegram_message(chat_id, msg_text, reply_markup=markup)
+                        await asyncio.sleep(0.5) # Prevent rate limiting
+                        
     except Exception as e:
         logger.error(f"Daily scan failed for user {user_id}: {e}")
         await send_telegram_message(chat_id, "❌ Your daily job scan failed to run. We will try again tomorrow.")

@@ -55,10 +55,31 @@ async def start_scrape(
             
             # Re-fetch after scan to get updated job count
             if chat_id:
+                from app.models.models import Job
+                import asyncio
+                
                 result = await db_bg.execute(select(User).filter(User.id == user.id))
                 u = result.scalars().first()
                 if u:
                     await send_telegram_message(chat_id, f"✅ <b>Scan Complete!</b>\n\nFound {u.scrape_job_count} matching opportunities. Check your dashboard to view them.")
+                    if u.scrape_job_count > 0:
+                        num_to_fetch = min(u.scrape_job_count, 5)
+                        job_result = await db_bg.execute(select(Job).order_by(Job.scraped_at.desc()).limit(num_to_fetch))
+                        new_jobs = job_result.scalars().all()
+                        
+                        for job in new_jobs:
+                            msg_text = f"🏢 <b>{job.employer}</b>\n💼 <b>{job.title}</b>\n📍 {job.location}"
+                            if job.pay_text:
+                                msg_text += f"\n💰 {job.pay_text}"
+                                
+                            markup = {
+                                "inline_keyboard": [
+                                    [{"text": "Apply on Company Site", "url": job.source_url}]
+                                ]
+                            } if job.source_url else None
+                            
+                            await send_telegram_message(chat_id, msg_text, reply_markup=markup)
+                            await asyncio.sleep(0.5)
     
     background_tasks.add_task(_run_scrape_bg)
     
